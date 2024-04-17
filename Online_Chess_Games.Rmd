@@ -1,0 +1,247 @@
+---
+title: "Online Chess Games"
+author: "Salokya"
+date: "2023-09-25"
+output:
+  
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+  pdf_document: default
+---
+
+
+# **Abstract**
+In this project, I have done a thorough data anlaysis for 20,000+ chess games played on Lichess, an online chess application. Analysis of player parameters such as moves, victor, rating, opening details etc. helps to better understand the nuances of online match-making, the diverse or most preferred game modes and overall gives a broader perspective of the game itself and also about the gaming platform. Understanding the working mechanism  facilitates understanding of player expectations, common player tendencies which further influences app development. But most importantly, it is a necessary for fair play and enjoyable user experience.
+  <br>  
+  <br>  
+  <br>  
+  
+# **Introduction**
+To comprehend the game and the gaming application, we first need to specify what we want to know and define the questions accordingly. As a chess player of intermediate calibre and regular user of Lichess, I have found the following questions seemingly obvious/fundamental:
+
+* How win probability varies by color?
+* Which is the most preferred game mode?
+* Which is the most frequent mode of victory?
+* Which is the most preferred opening move?
+* What is the average player rating? Is the average player rating of black and white similar?
+* How variation of rating difference influences win probability of higher rated player?
+  <br>  
+  <br>  
+  
+# **Dataset Description**
+The dataset for this project is provided by Mysar Ahmad Bhat on [Kaggle](https://www.kaggle.com/datasets/mysarahmadbhat/online-chess-games/). It has 20,058 records/rows(of which 19112 are unique) and 17 variables/columns.
+
+The different variables are described below:  
+ **1. game-id**: Every chess game has a unique identification number to ensure distinction from other games and  for future access  
+ **2. rated**: Unrated game is for casual play i.e. match outcome will not influence player rating.  
+ **3. turns**: It is a natural number denoting the total number of moves made in the match for a definite outcome.  
+ **4. victory_status**: It defines the nature of victory.  
+ **5. winner**: It describes which player won or if the match ended in a draw  
+ **6. time_increment**: The value before the '+' indicates the initial allocated time per player in minutes. The value after the '+' indicates the increase in allocated time in seconds per move.  
+ **7. white_id**: Profile id of the player playing as white. This is imperative to uniquely identify the player.  **8. white_rating**: A natural number denoting the skill level of the player. Higher value indicates greater competency. Rating increases on winning and decreases on losing.  
+ **9. black_id**: similar to white id  
+ **10. black_rating**: similar to white rating  
+ **11. moves**: denotes the sequence of moves played by each player.  
+ **12. opening_code**: denotes the code of the opening move of the game.  
+ **13. opening_moves**: The opening stage of the game is where a player activates the chess pieces and creates a strategic formation for further play. Opening moves is a natural number denoting the number of moves consumed in the opening stage.  
+ **14. opening_fullname**: Based on the type of opening, each opening has a universally accepted nomenclature, which is indicated by opening fullname.  
+ **15. opening_shortname**: shorter version of the opening fullname.  
+ **16. opening_response**: Depending on white's opening move, black has a typical/standard response move. opening response denotes if player black followed the standard response(also known as book move) or played a different move.  
+ **17. opening_variation**: Just as there are numerous opening moves and opening responses, every opening move/response has further various possibilities of subsequent moves termed as opening variation. The opening variation plays a crucial role in determining the intermediate gameplay. 
+  <br>  
+  <br>  
+  
+# **Exploratory analysis with plots**
+
+```{r include=FALSE}
+library(bookdown)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(pacman)
+library(readr)
+library(tidyr)
+library(tinytex)
+```
+
+```{r echo=FALSE}
+
+chess=read_csv("C:/Users/salok/OneDrive/Desktop/CMI/SEM-1/VIS/Vis Project/chess.csv",show_col_types = FALSE)
+
+```
+  
+  <br>  
+  
+## How win probability varies by color?
+From **Fig 1**, we observe that of all the games played, almost 50% resulted in victory of white, while of the remaining half, 45.41% was won by black and the rest i.e. 4.65% games resulted in a draw. If we ignore the draw, then white wins (49.94/(49.94+45.41))% i.e. 52.37% of all the games. This slightly skewed probability of win in favor of white is actually not due to randomness, but due to the 
+``$\href{https://en.wikipedia.org/wiki/First-move_advantage_in_chess}{first \ move \ advantage}$ in chess which states that for similar rated players, white's win probability lies between 52% and 56%, which supports our observation of 52.37%.
+
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+pietable=table(chess$winner,dnn="color")
+count=c(pietable["Black"],pietable["Draw"],pietable["White"])
+piepercent=round(100*count/sum(count),2)
+Victor=c("Black","Draw","White")
+
+
+ggplot(data.frame(Victor,piepercent),aes(x="",y=piepercent,fill=Victor))+geom_col(color = "black")+coord_polar(theta = "y")+geom_label(aes(label = piepercent),position = position_stack(vjust = 0.5),show.legend = F)+theme_test()+xlab("")+ylab("")+ggtitle("Fig 1: Variation of win probability by color")+
+scale_fill_manual(values = c("#C51605", "#FD8D14","#FFE17B"))+theme(plot.title=element_text(size=14,hjust=.2))
+```
+  <br>  
+  
+## Which is the most frequent mode of victory?
+  
+   <br>  
+    
+From **Fig 2**, we observe that probability of draw(including stale mate) is only 4%. Win by resignation is 56% whereas win by checkmate is 31%. It can be concluded that most players prefer to resign early on when they feel game is out of hand rather than face the embarrassment of checkmate.
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+vic=data.frame(table(chess$victory_status))
+vic_prob=round(vic$Freq/sum(vic$Freq),2)
+outcome=c("Draw","Mate","Out of Time","Resign")
+          
+ggplot(vic,aes(x=outcome,y=vic_prob))+geom_bar(stat = "identity", position = "dodge",fill=c("#6d67e4","#46c2cb","#f2f7a1","#9a1663"))+geom_text(aes(label=vic_prob),vjust=-.3)+ylab("Probability of game outcome")+xlab(" ")+theme_bw()+ggtitle("Fig 2: Probability of different victory modes")+theme(panel.background = element_rect(fill="#E4FBFF"),panel.grid.major = element_line(color="#00a9d3"),axis.text = element_text(size = 12),axis.title.y = element_text(size = 14),plot.title=element_text(size=14,hjust=.4))
+
+```
+  <br>  
+  <br>  
+  <br>  
+  <br>  
+  <br>  
+  <br>  
+  <br>  
+  <br>  
+  
+## Which is the most preferred opening move?
+
+From **Fig 3** below, we see that the most common opening move is Sicilian Defense. The popularity of this opening is even more than the next 2 openings combined. 
+
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+freq_open=tail(data.frame(sort(table(chess$opening_shortname,dnn='Opening_Move'),decreasing = F)),5)
+opening_name=freq_open$Opening_Move
+Freq=freq_open$Freq
+
+ggplot(freq_open,aes(x=Freq,y=opening_name))+geom_bar(stat = "identity", position = "dodge",fill=c("#FF6663","#FEB144","#fDFD97","#9EE09E","#9EC1CF"))+geom_text(aes(label=Freq),hjust=2.5)+ylab("")+xlab("Number of matches")+theme_bw()+ggtitle("Fig 3: Top 5 Opening Moves")+theme(panel.background = element_rect(fill="#E4FBFF"),panel.grid.major = element_line(color="#00a9d3"),axis.text = element_text(size = 12),axis.title.y = element_text(size = 12),axis.title.x = element_text(size = 14),plot.title = element_text(size = 14,hjust=.4))
+
+```
+  
+  <br>
+
+## If a player has higher rating than his opponent, how likely is that the higher rated player wins?
+From **Fig 4** below, we see that of the 19112 matches, there are 11784 higher rated wins and 7328 lower rated wins. So, it can be inferred that a higher rated player is about 50% more likely to win than his opponent. In Fig 8, we will see how higher rated win probability varies with the rating difference.
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+Diff=chess$white_rating-chess$black_rating
+rat_diff=data.frame(chess$winner ,chess$white_rating,chess$black_rating,Diff)
+is_high_rated_win=c((rat_diff$Diff>0 & rat_diff$chess.winner=='White')|(rat_diff$Diff<0 & rat_diff$chess.winner=='Black'))
+rat_diff=data.frame(chess$winner ,chess$white_rating,chess$black_rating,Diff,is_high_rated_win)
+
+
+win_diff=data.frame(Count=c(sum(rat_diff$is_high_rated_win==T),sum(rat_diff$is_high_rated_win==F)),Rated_Win=c("high_rated_win","low_rated_win"))
+
+library(ggplot2)
+ggplot(win_diff,aes(x=Rated_Win,y=Count))+geom_bar(stat="identity",width=.3, fill=c("#A2FF86","#4fc0d0"))+ggtitle("Fig 4: Comparison of High rated vs Low rated Win")+xlab("")+ylab("Number of matches")+geom_text(aes(label=Count),vjust=2)+theme_bw()+theme(panel.background = element_rect(fill="#E4FBFF"),panel.grid.major = element_line(color="#00a9d3"),axis.text = element_text(size = 12),axis.title.y = element_text(size=14),plot.title = element_text(size = 14,hjust=.4))
+
+```
+## How many moves are required to determine game outcome?
+From **Fig 5**, we observe that of 19112 games, more than 16000 games were over in less than or equal to 100 moves. The highest number of moves in a single match is 349. But there are just about 3000 matches where more than 100 moves were played. So, it can be inferred that the number of matches where more than 100 moves were played drops drastically with increase in number of moves. 
+
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+df=data.frame(turn_count=c(sum(chess$turns<=50),sum(chess$turns>50&chess$turns<=100),sum(chess$turns>100&chess$turns<=150),sum(chess$turns>150)),num_turns=c("<=50","051-100","101-150","150+"))
+
+ggplot(df, aes(x=num_turns,y=turn_count)) + geom_bar(stat="identity",width=.3,fill=c("#00EAD3","#FFF5B7","#FF449F","#005F99"))+ylab("Number of matches")+xlab("Number of moves")+ggtitle("Fig 5: Variation of Number of Moves")+geom_text(aes(label=turn_count),vjust=-.3)+theme_bw()+theme(panel.background = element_rect(fill="#E4FBFF"),panel.grid.major = element_line(color="#00a9d3"),axis.text = element_text(size = 12),axis.title = element_text(size=14),plot.title = element_text(size = 14,hjust=.5))
+```
+  
+  <br>
+  
+## What is the average player rating? Is the average player rating of black and white similar?
+From the data we find that the lowest rating is that of white viz 784 and the highest rating is that of black viz 2723. From **Fig 6**, we see that most players have rating between 1500 to 1750. Also another important observation that can be drawn from the graph is that in each rating band, both black and white have similar number of players. Assuming a player's rating remains in a particular band throughout,this implies he has equal chance to play as white or black, which is important for fair play (First Move Advantage!!)
+```{r echo=FALSE,out.width="70%",fig.align='center'}
+wr=chess$white_rating
+br=chess$black_rating
+
+WB_rat=c(sum(br>=750&br<1000),sum(wr>=750&wr<1000),sum(br>=1000&br<1250),sum(wr>=1000&wr<1250),sum(br>=1250&br<1500),sum(wr>=1250&wr<1500),sum(br>=1500&br<1750),sum(wr>=1500&wr<1750),sum(br>=1750&br<2000),sum(wr>=1750&wr<2000),sum(br>=2000&br<2250),sum(wr>=2000&wr<2250),sum(br>=2250&br<2500),sum(wr>=2250&wr<2500),sum(br>=2500),sum(wr>=2500))
+
+rat_band=rep(c("0750-1000","1000-1250","1250-1500","1500-1750","1750-2000","2000-2250","2250-2500","2500-2750"),each=2)
+
+Player_color=rep(c("Black","White"),8)
+rat_comp=data.frame(rat_band,Player_color,WB_rat)
+
+
+ggplot(rat_comp,aes(fill=Player_color,x=rat_band,y=WB_rat))+geom_bar(stat = "identity", position = "dodge",width =.9)+theme_bw()+scale_fill_manual(values = c("#865439","#FCDEC0"))+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1),panel.background = element_rect(fill="#E4FBFF"),panel.grid.major = element_line(color="#00a9d3"),axis.text = element_text(size = 12),axis.title.y = element_text(size=14),plot.title = element_text(size = 14,hjust=.5),axis.title.x = element_text(size=14,vjust=.4))+ylab("Number of matches")+xlab("Player Rating")+ggtitle("Fig 6: Frequency Comparison of Black vs White Rating")
+
+
+
+```
+  
+  <br>
+
+## Do people prefer rated game or casual play?  
+From **Fig 7**, we see that more than 80% of the games are rated in nature. Users have distinctly higher tendency to play rated games. 
+```{r, echo=FALSE,out.width="70%",fig.align='center'}
+rated=round(100*sum(chess$rated==T)/nrow(chess),2)
+not_rated=round(100*sum(chess$rated==F)/nrow(chess),2)
+value=c(rated,not_rated)
+Game_mode=c("Rated","Not rated")
+
+ggplot(data.frame(Game_mode,value),aes(x="",y=value,fill=Game_mode))+geom_col(color = "black")+coord_polar(theta = "y")+geom_label(aes(label = value),position = position_stack(vjust = 0.5),show.legend = F)+theme_test()+scale_fill_manual(values = c("#BC7AF9", "#F8FF95"))+xlab("")+ylab("")+ggtitle("Fig 7: Percentage of rated vs unrated games")
+  
+```
+  
+  <br>
+  
+## How rating difference influences win probability of higher rated player?
+High rated win probability is the probability of victory of the higher rated player. From **Fig 8** we see that when rating difference is less than 200, win probability of higher rated player is about 50%; and this high rated win probability increases when rating difference increases. When the rating difference becomes 1400 or more, this probability becomes 1 and victory of the higher rated player is predetermined. Hence it is essential during match-making that the rating difference be as less as possible or at least less than 200 to ensure fair play.
+
+```{r, echo=FALSE,out.width="70%",fig.align='center'}
+abs_diff=abs(Diff)
+rdiff=data.frame(rat_diff,abs_diff)
+hrw=rdiff$is_high_rated_win
+
+p1=round(sum(hrw==T & abs_diff<=200)/sum(abs_diff<=200),2)#p1 is prob of high rated win when rating diff is <=200
+p2=round(sum(hrw==T & abs_diff>200 & abs_diff<=400)/sum(abs_diff>200 & abs_diff<=400),2)
+p3=round(sum(hrw==T & abs_diff>400 & abs_diff<=600)/sum(abs_diff>400 & abs_diff<=600),2)
+p4=round(sum(hrw==T & abs_diff>600 & abs_diff<=800)/sum(abs_diff>600 & abs_diff<=800),2)
+p5=round(sum(hrw==T & abs_diff>800 & abs_diff<=1000)/sum(abs_diff>800 & abs_diff<=1000),2)
+p6=round(sum(hrw==T & abs_diff>1000 & abs_diff<=1200)/sum(abs_diff>1000 & abs_diff<=1200),2)
+p7=round(sum(hrw==T & abs_diff>1200 & abs_diff<=1400)/sum(abs_diff>1200 & abs_diff<=1400),2)
+p8=round(sum(hrw==T & abs_diff>1400)/sum(abs_diff>1400),2)
+
+p=c(p1,p2,p3,p4,p5,p6,p7,p8)
+dif=c("<=0200","0200-0400","0400-0600","0600-0800","0800-1000","1000-1200","1200-1400","1400+")
+
+ggplot(data.frame(p,dif),aes(x=dif, y=p, group=1))+geom_line(color="red")+geom_point()+xlab("Rating Difference")+ylab("High rated Win Probability")+ggtitle("Fig 8: Variation of high rated win probability with rating difference")+geom_text(label=p,nudge_x=-.1,nudge_y=0.03,check_overlap=T)+theme(panel.background = element_rect(fill="#dbe9f4"),panel.grid.major = element_line(color="#00a9d3"),plot.title=element_text(size=14,hjust=.2),axis.title = element_text(size=14),axis.text.x = element_text(angle=45, vjust=1, hjust=1),axis.text=element_text(size=12))
+
+
+
+```
+  
+  <br>  
+  <br>  
+  <br>
+  <br>  
+  <br>  
+  <br>
+  
+# Results
+Summarizing the observations so far, we learn that white is slightly more likely to win than black, given they have equal/similar ratings. Also most played games are rated and are likely to finish within 100 moves. The ratings of black and white are more or less identically distributed with similar minimum,maximum and average ratings. This ensures fair play, but most importantly the rating difference should be less. If the game doesn't result in a draw, the losing player is more likely to resign by themselves than be checkmated. 
+
+
+# Conclusion
+The above results confirm that thorough analysis is necessary to better understand the procedure of an online gaming platform. A beginner in chess will understand the game better from the recorded observations and results. We can also infer that our results are essential for proper match making, app development and better user experience.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
